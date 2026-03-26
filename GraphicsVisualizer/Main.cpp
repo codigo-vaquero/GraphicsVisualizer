@@ -585,7 +585,7 @@ class MyFrame : public wxFrame
 
 public:
     MyFrame()
-        : wxFrame(nullptr, wxID_ANY, "Image Grid Viewer",
+        : wxFrame(nullptr, wxID_ANY, "Image Viewer",
             wxDefaultPosition, wxSize(1000, 650))
     {
         wxInitAllImageHandlers();
