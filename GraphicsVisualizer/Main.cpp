@@ -6,6 +6,7 @@
 #include <wx/scrolwin.h>
 #include <wx/dir.h>
 #include <wx/gauge.h>
+#include <wx/menu.h>
 
 #define NANOSVG_IMPLEMENTATION
 #define NANOSVGRAST_IMPLEMENTATION
@@ -578,16 +579,12 @@ private:
 };
 
 // ── MyFrame (con mejor transferencia de foco) ───────────────────────────────
-class MyFrame : public wxFrame
-{
+class MyFrame : public wxFrame{
     wxGenericDirCtrl* m_dirCtrl;
     GridPanel* m_grid;
 
 public:
-    MyFrame()
-        : wxFrame(nullptr, wxID_ANY, "Image Viewer",
-            wxDefaultPosition, wxSize(1000, 650))
-    {
+    MyFrame(): wxFrame(nullptr, wxID_ANY, "Image Viewer", wxDefaultPosition, wxSize(1000, 650)){
         wxInitAllImageHandlers();
 
         auto* splitter = new wxSplitterWindow(this, wxID_ANY,
@@ -606,6 +603,15 @@ public:
 
         CreateStatusBar();
         SetStatusText("Selecciona una carpeta desde el panel izquierdo");
+
+        wxMenu* fileMenu = new wxMenu;
+        fileMenu->Append(wxID_NEW, "New\tCtrl+N");
+        fileMenu->Append(wxID_EXIT, "Exit\tCtrl+Q");
+
+        wxMenuBar* menuBar = new wxMenuBar;
+        menuBar->Append(fileMenu, "File");
+
+        SetMenuBar(menuBar);
     }
 
 private:
@@ -628,8 +634,7 @@ private:
             });
     }
 
-    void OnCharHookFrame(wxKeyEvent& evt)
-    {
+    void OnCharHookFrame(wxKeyEvent& evt){
         if (!m_grid || m_grid->GetCount() == 0) {
             evt.Skip();
             return;
@@ -649,11 +654,9 @@ private:
 };
 
 // ── App ─────────────────────────────────────────────────────────────────────
-class MyApp : public wxApp
-{
+class MyApp : public wxApp{
 public:
-    bool OnInit() override
-    {
+    bool OnInit() override {
         auto* frame = new MyFrame();
         frame->Show();
         return true;
