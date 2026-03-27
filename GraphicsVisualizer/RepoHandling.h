@@ -4,6 +4,6 @@
 
 class RepoHandling{
 public:
-	void createFile(const std::string& path);
+	void createFile();
 };
 
