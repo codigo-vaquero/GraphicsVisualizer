@@ -12,6 +12,7 @@
 #define NANOSVGRAST_IMPLEMENTATION
 #include <nanosvg/nanosvg.h>
 #include <nanosvg/nanosvgrast.h>
+#include "RepoHandling.h"
 
 #include <vector>
 #include <queue>
@@ -30,8 +31,7 @@ static const int BUFFER_ROWS = 2;
 wxDEFINE_EVENT(wxEVT_THUMB_READY, wxCommandEvent);
 
 // ── LoadingDialog ─────────────────────────────────────────────
-class LoadingDialog : public wxDialog
-{
+class LoadingDialog : public wxDialog{
     wxGauge* m_gauge;
     wxStaticText* m_label;
     int m_total;
@@ -43,8 +43,8 @@ public:
         : wxDialog(parent, wxID_ANY, "Cargando imágenes",
             wxDefaultPosition, wxSize(380, 130),
             wxCAPTION | wxSTAY_ON_TOP)
-        , m_total(total)
-    {
+        , m_total(total){
+
         auto* sizer = new wxBoxSizer(wxVERTICAL);
         m_label = new wxStaticText(this, wxID_ANY,
             wxString::Format("Cargando 0 de %d...", total));
@@ -59,9 +59,8 @@ public:
         m_gauge->SetValue(0);
     }
 
-    void Update(int done)
-    {
-        if (done - m_lastUpdate < UPDATE_STEP && done < m_total)
+    void Update(int done){
+        if(done - m_lastUpdate < UPDATE_STEP && done < m_total)
             return;
 
         m_lastUpdate = done;
@@ -169,8 +168,7 @@ protected:
 };
 
 // ── GridPanel keyboard navigation──────────────────────────────────────────
-class GridPanel : public wxScrolledWindow
-{
+class GridPanel : public wxScrolledWindow{
     std::vector<ThumbItem> m_items;
     std::queue<int> m_pending;
     std::set<int> m_loading;
@@ -186,9 +184,8 @@ class GridPanel : public wxScrolledWindow
 public:
     GridPanel(wxWindow* parent)
         : wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-            wxHSCROLL | wxVSCROLL | wxWANTS_CHARS | wxTAB_TRAVERSAL)
-        , m_scrollTimer(this)
-    {
+            wxHSCROLL | wxVSCROLL | wxWANTS_CHARS | wxTAB_TRAVERSAL), m_scrollTimer(this) {
+
         SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
         SetScrollRate(0, 8);
         SetFocus();
@@ -270,7 +267,7 @@ public:
             MoveSelection(0);
     }
 
-    int GetCount() const { return (int)m_items.size(); }
+    int GetCount() const { return (int)m_items.size(); }   
 
 private:
     void DispatchAll(){
@@ -353,7 +350,7 @@ private:
         switch (key){
         case WXK_UP:
             MoveSelection(-m_cols);
-            evt.Skip(false);        // consumimos el evento
+            evt.Skip(false);
             return;
         case WXK_DOWN:
             MoveSelection(m_cols);
@@ -385,11 +382,10 @@ private:
             return;
         }
 
-        evt.Skip();   // permitir otras teclas (Escape, letras, etc.)
+        evt.Skip();
     }
 
     void OnKeyDown(wxKeyEvent& evt){
-        // Backup por si CharHook no captura todo
         OnCharHook(evt);
     }
 
@@ -576,6 +572,13 @@ public:
         menuBar->Append(fileMenu, "File");
 
         SetMenuBar(menuBar);
+
+        Bind(wxEVT_MENU, [this](wxCommandEvent& evt){
+            if(evt.GetId() == wxID_EXIT)
+                Close();
+            else if(evt.GetId() == wxID_NEW)
+                saveRepo();
+		});
     }
 
 private:
@@ -614,7 +617,10 @@ private:
         evt.Skip();
     }
 
-
+    void saveRepo() {
+        RepoHandling rHandler;
+		rHandler.createFile();        		
+    }
 };
 
 // ── App ─────────────────────────────────────────────────────────────────────
