@@ -29,7 +29,7 @@ static const int BUFFER_ROWS = 2;
 
 wxDEFINE_EVENT(wxEVT_THUMB_READY, wxCommandEvent);
 
-// ── LoadingDialog (sin cambios) ─────────────────────────────────────────────
+// ── LoadingDialog ─────────────────────────────────────────────
 class LoadingDialog : public wxDialog
 {
     wxGauge* m_gauge;
@@ -76,7 +76,7 @@ public:
     }
 };
 
-// ── ThumbItem y ThumbLoader (sin cambios importantes) ───────────────────────
+// ── ThumbItem y ThumbLoader ───────────────────────
 enum class ThumbState { Pending, Loading, Ready, Failed };
 
 struct ThumbItem
@@ -168,7 +168,7 @@ protected:
     }
 };
 
-// ── GridPanel con teclado mejorado ──────────────────────────────────────────
+// ── GridPanel keyboard navigation──────────────────────────────────────────
 class GridPanel : public wxScrolledWindow
 {
     std::vector<ThumbItem> m_items;
@@ -203,20 +203,14 @@ public:
         Bind(wxEVT_SCROLLWIN_THUMBTRACK, &GridPanel::OnScroll, this);
         Bind(wxEVT_SCROLLWIN_THUMBRELEASE, &GridPanel::OnScroll, this);
 
-        // TECLADO MEJORADO
-        Bind(wxEVT_CHAR_HOOK, &GridPanel::OnCharHook, this);   // ← Principal
+        Bind(wxEVT_CHAR_HOOK, &GridPanel::OnCharHook, this);
         Bind(wxEVT_KEY_DOWN, &GridPanel::OnKeyDown, this);
     }
 
     bool AcceptsFocus() const override { return true; }
     bool AcceptsFocusFromKeyboard() const override { return true; }
 
-    // ... LoadFolder, DispatchAll, RecalcLayout, CellRect, GetVisibleRange, 
-    //     OnThumbReady, OnPaint, OnSize, OnScroll, OnWheel, OnMouseClick, 
-    //     OnDClick, MoveSelection, EnsureVisible  se mantienen iguales ...
-
-    void LoadFolder(const wxString& dir)
-    {
+    void LoadFolder(const wxString& dir){
         m_cancelled = true;
         m_items.clear();
         m_selected = -1;
@@ -228,17 +222,14 @@ public:
         static const wxString exts[] = { "png","jpg","jpeg","bmp","gif","svg","tiff","tif","webp" };
 
         wxDir d(dir);
-        if (d.IsOpened())
-        {
+        if(d.IsOpened()){
             wxString fname;
             bool ok = d.GetFirst(&fname, wxEmptyString, wxDIR_FILES);
-            while (ok)
-            {
+            
+            while(ok){
                 wxString ext = fname.AfterLast('.').Lower();
-                for (auto& e : exts)
-                {
-                    if (ext == e)
-                    {
+                for(auto& e : exts){
+                    if(ext == e){
                         ThumbItem item;
                         item.path = dir + wxFILE_SEP_PATH + fname;
                         item.name = fname;
@@ -246,20 +237,20 @@ public:
                         break;
                     }
                 }
+
                 ok = d.GetNext(&fname);
             }
         }
 
         m_cancelled = false;
 
-        if (m_items.empty())
-        {
+        if(m_items.empty()){
             RecalcLayout();
             Refresh();
             return;
         }
 
-        for (int i = 0; i < (int)m_items.size(); ++i)
+        for(int i = 0; i < (int)m_items.size(); ++i)
             m_pending.push(i);
 
         RecalcLayout();
@@ -282,13 +273,11 @@ public:
     int GetCount() const { return (int)m_items.size(); }
 
 private:
-    void DispatchAll()
-    {
-        while (m_activeThreads < MAX_THREADS && !m_pending.empty())
-        {
+    void DispatchAll(){
+        while(m_activeThreads < MAX_THREADS && !m_pending.empty()){
             int idx = m_pending.front();
             m_pending.pop();
-            if (m_items[idx].state != ThumbState::Pending) continue;
+            if(m_items[idx].state != ThumbState::Pending) continue;
 
             m_items[idx].state = ThumbState::Loading;
             m_loading.insert(idx);
@@ -298,8 +287,7 @@ private:
         }
     }
 
-    void RecalcLayout()
-    {
+    void RecalcLayout(){
         wxSize sz = GetClientSize();
         if (sz.x <= 0) sz.x = 800;
         m_cols = std::max(1, sz.x / CELL_W);
@@ -307,13 +295,11 @@ private:
         SetVirtualSize(sz.x, rows * CELL_H + THUMB_PAD);
     }
 
-    wxRect CellRect(int i) const
-    {
+    wxRect CellRect(int i) const{
         return { (i % m_cols) * CELL_W, (i / m_cols) * CELL_H, CELL_W, CELL_H };
     }
 
-    void GetVisibleRange(int& first, int& last) const
-    {
+    void GetVisibleRange(int& first, int& last) const{
         int ppuX = 0, ppuY = 0;
         GetScrollPixelsPerUnit(&ppuX, &ppuY);
         int scrollY = GetScrollPos(wxVERTICAL) * (ppuY > 0 ? ppuY : 1);
@@ -327,8 +313,7 @@ private:
         last = std::min((int)m_items.size() - 1, (lastRow + 1) * m_cols - 1);
     }
 
-    void OnThumbReady(wxCommandEvent& evt)
-    {
+    void OnThumbReady(wxCommandEvent& evt){
         int idx = evt.GetInt();
         auto* img = static_cast<wxImage*>(evt.GetClientData());
 
@@ -337,39 +322,35 @@ private:
 
         bool wasReady = false;
         if (idx >= 0 && idx < (int)m_items.size() &&
-            m_items[idx].state == ThumbState::Loading)
-        {
-            if (img && img->IsOk())
-            {
+            m_items[idx].state == ThumbState::Loading){
+
+            if(img && img->IsOk()){
                 m_items[idx].thumb = wxBitmap(*img);
                 m_items[idx].state = ThumbState::Ready;
-            }
-            else
-            {
+            }else{
                 m_items[idx].state = ThumbState::Failed;
             }
+
             m_doneCount++;
             wasReady = true;
         }
 
         delete img;
 
-        if (!m_pending.empty())
+        if(!m_pending.empty())
             DispatchAll();
 
-        if (m_loadDlg && wasReady)
+        if(m_loadDlg && wasReady)
             m_loadDlg->Update(m_doneCount);
         else if (!m_loadDlg)
             Refresh();
     }
 
-    // ==================== TECLADO CORREGIDO ====================
-    void OnCharHook(wxKeyEvent& evt)
-    {
+    // ==================== GRID NAVIGATION ====================
+    void OnCharHook(wxKeyEvent& evt){
         int key = evt.GetKeyCode();
 
-        switch (key)
-        {
+        switch (key){
         case WXK_UP:
             MoveSelection(-m_cols);
             evt.Skip(false);        // consumimos el evento
@@ -407,22 +388,19 @@ private:
         evt.Skip();   // permitir otras teclas (Escape, letras, etc.)
     }
 
-    void OnKeyDown(wxKeyEvent& evt)
-    {
+    void OnKeyDown(wxKeyEvent& evt){
         // Backup por si CharHook no captura todo
         OnCharHook(evt);
     }
 
-    void OnPaint(wxPaintEvent&)
-    {
+    void OnPaint(wxPaintEvent&){
         wxPaintDC dc(this);
         PrepareDC(dc);
         dc.Clear();
 
-        if (m_items.empty())
-        {
+        if(m_items.empty()){
             dc.SetTextForeground(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
-            dc.DrawText("Selecciona una carpeta", 16, 16);
+            dc.DrawText("Select a folder...", 16, 16);
             return;
         }
 
@@ -435,14 +413,12 @@ private:
 
         dc.SetFont(wxFont(8, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
-        for (int i = first; i <= last; ++i)
-        {
-            if (i < 0 || i >= (int)m_items.size()) continue;
+        for(int i = first; i <= last; ++i){
+            if(i < 0 || i >= (int)m_items.size()) continue;
             auto& item = m_items[i];
             wxRect cell = CellRect(i);
 
-            if (item.selected)
-            {
+            if(item.selected){
                 dc.SetBrush(wxBrush(selBg));
                 dc.SetPen(*wxTRANSPARENT_PEN);
                 dc.DrawRoundedRectangle(cell.Deflate(4), 6);
@@ -450,22 +426,17 @@ private:
 
             wxRect thumbArea(cell.x + THUMB_PAD, cell.y + THUMB_PAD, THUMB_SIZE, THUMB_SIZE);
 
-            if (item.state == ThumbState::Ready && item.thumb.IsOk())
-            {
+            if(item.state == ThumbState::Ready && item.thumb.IsOk()){
                 int bx = thumbArea.x + (THUMB_SIZE - item.thumb.GetWidth()) / 2;
                 int by = thumbArea.y + (THUMB_SIZE - item.thumb.GetHeight()) / 2;
                 dc.DrawBitmap(item.thumb, bx, by, true);
-            }
-            else if (item.state == ThumbState::Failed)
-            {
+            }else if(item.state == ThumbState::Failed){
                 dc.SetBrush(wxBrush(wxColour(250, 235, 235)));
                 dc.SetPen(wxPen(wxColour(220, 180, 180)));
                 dc.DrawRoundedRectangle(thumbArea, 4);
                 dc.SetTextForeground(wxColour(180, 100, 100));
                 dc.DrawText("?", thumbArea.x + THUMB_SIZE / 2 - 4, thumbArea.y + THUMB_SIZE / 2 - 7);
-            }
-            else
-            {
+            }else{
                 dc.SetBrush(wxBrush(wxColour(245, 245, 245)));
                 dc.SetPen(wxPen(wxColour(210, 210, 210)));
                 dc.DrawRoundedRectangle(thumbArea, 4);
@@ -479,8 +450,8 @@ private:
             wxString label = item.name;
             wxCoord tw, th;
             dc.GetTextExtent(label, &tw, &th);
-            while (tw > CELL_W - 8 && label.Len() > 4)
-            {
+            
+            while(tw > CELL_W - 8 && label.Len() > 4){
                 label = label.Left(label.Len() - 4) + "...";
                 dc.GetTextExtent(label, &tw, &th);
             }
@@ -491,8 +462,7 @@ private:
         }
     }
 
-    void OnSize(wxSizeEvent& evt)
-    {
+    void OnSize(wxSizeEvent& evt){
         RecalcLayout();
         Refresh();
         evt.Skip();
@@ -502,8 +472,7 @@ private:
     void OnWheel(wxMouseEvent& evt) { evt.Skip(); m_scrollTimer.StartOnce(80); }
     void OnScrollTimer(wxTimerEvent&) {}
 
-    void OnMouseClick(wxMouseEvent& evt)
-    {
+    void OnMouseClick(wxMouseEvent& evt){
         SetFocus();
         wxClientDC dc(this);
         PrepareDC(dc);
@@ -512,51 +481,47 @@ private:
         for (auto& item : m_items) item.selected = false;
         m_selected = -1;
 
-        for (int i = 0; i < (int)m_items.size(); ++i)
-        {
-            if (CellRect(i).Contains(pt))
-            {
+        for(int i = 0; i < (int)m_items.size(); ++i){
+            if(CellRect(i).Contains(pt)){
                 m_items[i].selected = true;
                 m_selected = i;
                 break;
             }
         }
+
         Refresh();
         evt.Skip();
     }
 
-    void OnDClick(wxMouseEvent& evt)
-    {
+    void OnDClick(wxMouseEvent& evt){
         OnMouseClick(evt);
-        if (m_selected >= 0)
+        if(m_selected >= 0)
             wxLaunchDefaultApplication(m_items[m_selected].path);
     }
 
-    void MoveSelection(int delta)
-    {
-        if (m_items.empty()) return;
+    void MoveSelection(int delta){
+        if(m_items.empty()) return;
 
         int old = m_selected;
-        if (m_selected < 0)
+        if(m_selected < 0)
             m_selected = 0;
         else
             m_selected += delta;
 
-        if (m_selected < 0) m_selected = 0;
-        if (m_selected >= (int)m_items.size())
+        if(m_selected < 0) m_selected = 0;
+        if(m_selected >= (int)m_items.size())
             m_selected = (int)m_items.size() - 1;
 
-        if (m_selected == old) return;
+        if(m_selected == old) return;
 
-        for (auto& item : m_items) item.selected = false;
+        for(auto& item : m_items) item.selected = false;
         m_items[m_selected].selected = true;
 
         EnsureVisible(m_selected);
         Refresh();
     }
 
-    void EnsureVisible(int index)
-    {
+    void EnsureVisible(int index){
         if (index < 0 || index >= (int)m_items.size()) return;
 
         int row = index / m_cols;
@@ -568,17 +533,16 @@ private:
         int scrollY = GetScrollPos(wxVERTICAL) * (ppuY > 0 ? ppuY : 1);
         wxSize client = GetClientSize();
 
-        if (yTop < scrollY)
+        if(yTop < scrollY)
             Scroll(0, yTop / (ppuY > 0 ? ppuY : 1));
-        else if (yBottom > scrollY + client.y)
-        {
+        else if(yBottom > scrollY + client.y){
             int target = (yBottom - client.y + THUMB_PAD) / (ppuY > 0 ? ppuY : 1);
             Scroll(0, target);
         }
     }
 };
 
-// ── MyFrame (con mejor transferencia de foco) ───────────────────────────────
+// ── MyFrame ───────────────────────────────
 class MyFrame : public wxFrame{
     wxGenericDirCtrl* m_dirCtrl;
     GridPanel* m_grid;
@@ -602,7 +566,7 @@ public:
         Bind(wxEVT_CHAR_HOOK, &MyFrame::OnCharHookFrame, this);
 
         CreateStatusBar();
-        SetStatusText("Selecciona una carpeta desde el panel izquierdo");
+        SetStatusText("Select a folder from the folder tree...");
 
         wxMenu* fileMenu = new wxMenu;
         fileMenu->Append(wxID_NEW, "New\tCtrl+N");
@@ -615,48 +579,48 @@ public:
     }
 
 private:
-    void OnDirSelected(wxCommandEvent&)
-    {
+    void OnDirSelected(wxCommandEvent&){
         wxString dir = m_dirCtrl->GetPath();
-        if (dir.IsEmpty()) return;
+        if(dir.IsEmpty()) return;
 
         m_grid->LoadFolder(dir);
 
         int n = m_grid->GetCount();
-        SetStatusText(wxString::Format("%s — %d imagen%s", dir, n, n == 1 ? "" : "es"));
+        SetStatusText(wxString::Format("%s — %d Image%s", dir, n, n == 1 ? "" : "s"));
 
-        // Transferencia de foco más fuerte
-        CallAfter([this]() {
-            if (m_grid) {
+        CallAfter([this](){
+            if(m_grid){
                 m_grid->SetFocus();
                 m_grid->SetFocusFromKbd();
             }
-            });
+        });
     }
 
     void OnCharHookFrame(wxKeyEvent& evt){
-        if (!m_grid || m_grid->GetCount() == 0) {
+        if(!m_grid || m_grid->GetCount() == 0){
             evt.Skip();
             return;
         }
 
         int key = evt.GetKeyCode();
-        if (key == WXK_UP || key == WXK_DOWN || key == WXK_LEFT || key == WXK_RIGHT ||
-            key == WXK_PAGEUP || key == WXK_PAGEDOWN || key == WXK_HOME || key == WXK_END)
-        {
+        if(key == WXK_UP || key == WXK_DOWN || key == WXK_LEFT || key == WXK_RIGHT ||
+            key == WXK_PAGEUP || key == WXK_PAGEDOWN || key == WXK_HOME || key == WXK_END){
             m_grid->SetFocus();
             wxPostEvent(m_grid, evt);
-            return;                    // consumimos el evento
+
+            return;
         }
 
         evt.Skip();
     }
+
+
 };
 
 // ── App ─────────────────────────────────────────────────────────────────────
 class MyApp : public wxApp{
 public:
-    bool OnInit() override {
+    bool OnInit() override{
         auto* frame = new MyFrame();
         frame->Show();
         return true;
