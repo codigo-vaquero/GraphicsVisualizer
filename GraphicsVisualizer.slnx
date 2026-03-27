@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="GraphicsVisualizer/GraphicsVisualizer.vcxproj" />
+  <Project Path="GraphicsVisualizer/GraphicsVisualizer.vcxproj" Id="92794d26-1a06-4c15-9985-aaa3423ec702" />
 </Solution>
